@@ -1,0 +1,26 @@
+{
+  "name": "boss-cli",
+  "version": "0.1.0",
+  "description": "BOSS 直聘求职端命令行工具，使用本地浏览器会话",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JACKWang19559/pay-by-god.git"
+  },
+  "bin": {
+    "boss": "./bin/boss.js"
+  },
+  "scripts": {
+    "start": "node ./bin/boss.js",
+    "test": "node --test",
+    "check": "node scripts/check-syntax.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright-core": "1.58.2"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "BOSS 直聘沟通助手"
+  short_description: "读取招聘沟通与消息历史，核对收件人并按用户授权开聊或发送文字"
+  default_prompt: "使用 $boss-cli-chat 查看我的沟通列表，帮我为指定会话起草回复。"

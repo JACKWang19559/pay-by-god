@@ -1,0 +1,18 @@
+node_modules/
+.boss-cli/
+*.log
+coverage/
+
+# Local account data, exports and environment configuration.
+/exports/
+.env
+.env.*
+!.env.example
+
+# Private research, screenshots and downloaded third-party assets.
+/research/
+
+# One-off live-account probes; not required by the CLI or its tests.
+/scripts/verify-*.mjs
+/scripts/probe-*.mjs
+/scripts/diagnose-*.mjs

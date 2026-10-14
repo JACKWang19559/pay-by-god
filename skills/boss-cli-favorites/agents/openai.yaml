@@ -1,0 +1,4 @@
+interface:
+  display_name: "职位收藏管理"
+  short_description: "通过 boss-cli 查看、导出收藏，预览并按明确要求添加或取消收藏"
+  default_prompt: "使用 $boss-cli-favorites 查看我的收藏职位，并汇总职位、公司和薪资。"

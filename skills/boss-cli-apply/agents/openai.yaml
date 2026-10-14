@@ -1,0 +1,4 @@
+interface:
+  display_name: "BOSS 直聘简历投递助手"
+  short_description: "预览指定职位的附件简历，明确选择简历后按用户授权提交投递"
+  default_prompt: "使用 $boss-cli-apply 预览我指定职位的可用附件简历和投递条件。"

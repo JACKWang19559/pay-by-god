@@ -1,0 +1,4 @@
+interface:
+  display_name: "BOSS CLI 新手引导"
+  short_description: "检查运行环境与浏览器，配置独立账号并引导本人登录和核验状态"
+  default_prompt: "使用 $boss-cli-setup 帮我检查项目环境、配置浏览器并完成首次登录引导。"
