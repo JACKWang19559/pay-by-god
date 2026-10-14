@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { BrowserSession, SITE_ORIGIN } from './browser-session.js';
 import { SiteTransport } from './site-transport.js';
+import { normalizeJobCompany } from './company.js';
 import { BossCliError } from './errors.js';
 import { assertApiSuccess, buildSearchParams, flattenCities, normalizeJob, parseJobTarget, resolveCity } from './protocol.js';
 
@@ -149,17 +150,18 @@ export class BossClient {
         let vue = el.__vue__;
         for (let depth = 0; vue && depth < 8; depth++, vue = vue.$parent) {
           const candidate = vue.$props?.data ?? vue.data ?? vue.jobDetail;
-          if (candidate?.jobInfo) return { ...JSON.parse(JSON.stringify(candidate)), observedJobId: id };
+          if (candidate?.jobInfo) return { ...JSON.parse(JSON.stringify(candidate)), observedJobId: id, observedFrom: 'rendered-page' };
         }
       }
       const text = selector => document.querySelector(selector)?.textContent?.trim() ?? '';
       const description = document.querySelector('.job-sec-text, .job-detail-section .text, .job-detail-container .desc, .job-detail-box .desc');
       const descriptionText = description?.innerText?.trim() || description?.textContent?.trim() || '';
+      const companyDescription = document.querySelector('.company-info-box .job-sec-text, .company-info .text');
       return {
         securityId: parsed.searchParams.get('securityId') ?? undefined, lid: parsed.searchParams.get('lid') ?? undefined,
         jobInfo: { encryptJobId: id, jobName: text('.job-banner h1, .job-primary h1, .job-detail-box .job-title, .job-detail-box .job-name, .job-detail-container .job-name'), salaryDesc: text('.job-banner .salary, .job-primary .salary, .job-detail-box .job-salary, .job-detail-container .job-salary'), postDescription: descriptionText, cityName: text('.text-city'), jobExperience: text('.text-experiece'), jobDegree: text('.text-degree') },
         bossInfo: { name: text('.boss-info .name, .boss-info-attr .name'), title: text('.boss-info .job-title') },
-        brandComInfo: { brandName: text('.company-info .name, .sider-company .company-info a') },
+        brandComInfo: { brandName: text('.company-info .name, .sider-company .company-info a'), introduce: companyDescription?.innerText?.trim() || companyDescription?.textContent?.trim() || '' },
         relationInfo: {}, oneKeyResumeInfo: { canSendResume: Boolean(document.querySelector('.btn-deliver:not(.btn-disabled)')) },
         observedFrom: 'rendered-page',
       };
@@ -205,6 +207,9 @@ export class BossClient {
   async job({ target }) {
     const context = await this._jobContext(target);
     return { ...context.job, description: context.data.jobInfo.postDescription ?? '', relationship: { favorite: context.data.relationInfo?.interestJob ?? null, hasConversation: context.data.relationInfo?.beFriend ?? null, canSendResume: context.data.oneKeyResumeInfo?.canSendResume ?? null }, observedFrom: context.data.observedFrom ?? 'job/detail.json', context: context.context };
+  }
+  async company({ target }) {
+    return normalizeJobCompany(await this._jobContext(target));
   }
   async favorites({ action = 'list', target, page = 1, limit = 15, execute = false } = {}) {
     if (action === 'list') {

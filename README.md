@@ -1,8 +1,8 @@
 # pay-by-god
 
-BOSS 直聘求职端命令行工具，提供职位搜索、详情、收藏、沟通与附件简历投递命令，使用 CLI 专用 Edge / Chrome 浏览器中的正常登录会话。
+BOSS 直聘求职端命令行工具，提供职位搜索、职位及关联公司资料、收藏、沟通与附件简历投递命令，使用 CLI 专用 Edge / Chrome 浏览器中的正常登录会话。
 
-当前版本为 `0.1.0`，不是 BOSS 直聘官方 API。**搜索与职位详情已通过真实站点只读验证；收藏、沟通和投递写操作通过隔离测试，尚未完成真实账号写入验证。**
+当前版本为 `0.1.0`，不是 BOSS 直聘官方 API。**搜索、职位详情与职位关联公司资料已通过真实站点只读验证；收藏、沟通和投递写操作通过隔离测试，尚未完成真实账号写入验证。**
 
 搜索与详情会先等待正常职位页面完成初始化，再发送请求；支持完整职位链接、缓存 ID 和无缓存 ID 的页面读取。站点要求人工验证时，需要在专用浏览器中完成。
 
@@ -13,7 +13,7 @@ BOSS 直聘求职端命令行工具，提供职位搜索、详情、收藏、沟
 | 技能 | 用途 |
 | --- | --- |
 | [boss-cli-setup](skills/boss-cli-setup/SKILL.md) | 新手环境检查、Node/npm 与浏览器配置、独立账号登录引导及常见错误处理；附离线预检脚本 |
-| [boss-cli-jobs](skills/boss-cli-jobs/SKILL.md) | 城市、职位搜索与筛选、详情读取和结果导出 |
+| [boss-cli-jobs](skills/boss-cli-jobs/SKILL.md) | 城市、职位搜索与筛选、职位及关联公司资料读取和结果导出 |
 | [boss-cli-favorites](skills/boss-cli-favorites/SKILL.md) | 收藏分页查看、收藏与取消收藏 |
 | [boss-cli-chat](skills/boss-cli-chat/SKILL.md) | 会话与历史消息、发起沟通、消息预览和发送 |
 | [boss-cli-apply](skills/boss-cli-apply/SKILL.md) | 附件简历预览、选择与投递 |
@@ -111,6 +111,23 @@ node bin/boss.js job "$job" --json
 搜索 JSON 会显示实际发送的筛选代码。详情 JSON 的 `context.source` 表示链接、缓存或页面来源。链接提供新 `securityId` 时，不会拼接旧缓存的 `lid`；纯数字内部 ID 不作为加密职位 ID 使用。
 
 CLI 自动复用职位缓存的本地期限为 **30 分钟**，这不是站点公布的有效期。超过期限时尝试正常页面获取新上下文；没有新数据会报告 `STALE_JOB_CONTEXT`。验证、认证、限流或网络错误会直接停止，不借刷新缓存重新请求。每次 `login` / `logout` 会清理当前 profile/CDP scope 的职位缓存，其他 scope 与城市缓存保留。
+
+## 职位关联公司资料
+
+从指定职位读取公司资料，使用同一个完整职位链接或加密职位 ID：
+
+```powershell
+node bin/boss.js company "$job" --json
+node bin/boss.js company "$job" --profile job-search --json --output ".\exports\company.json"
+```
+
+`company` 是只读命令，不接受 `--execute` 或搜索筛选参数；它查询给定职位关联的公司，不按公司名称搜索。与 `job` 一样优先使用搜索或收藏结果中的完整职位链接，并沿用取得该职位时的 profile。
+
+输出按站点实际提供的数据包含公司名称 `name`、行业 `industry`、规模 `scale`、融资阶段 `stage`、介绍 `description` 和福利 `welfare`，以及关联职位 `job`、数据来源 `observedFrom` 和上下文 `context`。公司标识及可用上下文充分时还会提供公司主页 `url`；匿名或代招等情况下不推算主页。
+
+`name` 是职位中展示的公司；`recruitingCompany.name` 是招聘者展示的公司，两者在代招场景可能不同，不据此推断实际劳动合同主体。缺失字段不补造；`job.workAddress` 仅在站点允许展示时输出，是该岗位的工作地点，不是公司注册地址。该命令读取职位附带的公司资料，不包含公司主页的完整工商信息。
+
+无缓存职位 ID 会正常打开详情页读取；页面不提供完整资料时，结果可能只有公司名称与介绍。未取得公司名称会报告 `COMPANY_INFO_UNAVAILABLE`，不会把空对象当作完整公司资料。
 
 ## 收藏
 

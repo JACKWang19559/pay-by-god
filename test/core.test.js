@@ -19,6 +19,31 @@ test('search parser accepts Unicode, equals options, filters and global options 
   assert.equal(parse(['search', '--', '--literal']).args.query, '--literal');
 });
 
+test('company parser accepts one job target and existing global output/profile options', () => {
+  for (const target of ['job123', 'https://www.zhipin.com/job_detail/job123.html?securityId=context&lid=list-1']) {
+    const parsed = parseArguments(['--profile', 'work', 'company', target, '--json', '--timeout', '15000']);
+    assert.deepEqual(resolveCommand(parsed), { name: 'company', method: 'company', args: { target } });
+    assert.equal(parsed.options.profile, 'work');
+    assert.equal(parsed.options.format, 'json');
+  }
+  const csv = parseArguments(['company', 'job123', '--format', 'csv', '--output', './company.csv']);
+  assert.equal(resolveCommand(csv).method, 'company');
+  assert.equal(csv.options.output, './company.csv');
+  assert.equal(csv.options.format, 'csv');
+});
+
+test('company rejects absent or extra targets, write flags and options for other commands', () => {
+  for (const args of [
+    ['company'], ['company', '   '], ['company', 'one', 'two'], ['company', 'job123', '--execute'],
+    ...[
+      ['query', 'dev'], ['city', '北京'], ['page', '2'], ['limit', '5'], ['salary', '10-20K'],
+      ['experience', '1-3年'], ['education', '本科'], ['job-type', '全职'], ['industry', '100001'],
+      ['scale', '20-99人'], ['stage', 'A轮'], ['business-district', 'area'], ['subway', 'line'],
+      ['wait', '30000'], ['resume-id', 'resume123'], ['text', 'hello'], ['message', 'hello'],
+    ].map(([option, value]) => ['company', 'job123', `--${option}`, value]),
+  ]) assert.throws(() => parse(args), { code: 'USAGE_ERROR' }, args.join(' '));
+});
+
 test('parser rejects typos, malformed integers, option conflicts and missing arguments', () => {
   for (const args of [
     ['search', 'dev', '--limt', '1'], ['search', 'dev', '--page', '0'], ['search', 'dev', '--limit', '2.5'],
@@ -100,6 +125,36 @@ test('main serializes actionable errors and closes client on failure', async () 
   assert.ok(!stderr.value.includes('secret'));
   assert.equal(stdout.value, '');
   assert.equal(closed, true);
+});
+
+test('main dispatches company reads with the selected profile and complete target', async () => {
+  const target = 'https://www.zhipin.com/job_detail/job123.html?securityId=context&lid=list-1';
+  const stdout = capture(); const stderr = capture(); const calls = [];
+  const result = { name: '示例公司', industry: '互联网', job: { id: 'job123', title: '前端开发' } };
+  const exit = await main(['--profile', 'work', 'company', target, '--json'], {
+    stdout, stderr,
+    clientFactory: (config) => ({
+      company: async (args) => { calls.push({ profile: config.profile, args }); return result; },
+      close: async () => { calls.push('close'); },
+    }),
+  });
+  assert.equal(exit, 0);
+  assert.deepEqual(calls, [{ profile: 'work', args: { target } }, 'close']);
+  assert.deepEqual(JSON.parse(stdout.value), result);
+  assert.equal(stderr.value, '');
+});
+
+test('invalid company options fail before opening a client', async () => {
+  for (const args of [['company'], ['company', 'job123', '--execute'], ['company', 'job123', '--city', '北京']]) {
+    const stdout = capture(); const stderr = capture();
+    const exit = await main([...args, '--json'], {
+      stdout, stderr,
+      clientFactory: () => { assert.fail('invalid company invocation must not open a browser'); },
+    });
+    assert.equal(exit, 2);
+    assert.equal(JSON.parse(stderr.value).error.code, 'USAGE_ERROR');
+    assert.equal(stdout.value, '');
+  }
 });
 
 test('main writes valid output file without mixing status into stdout', async () => {

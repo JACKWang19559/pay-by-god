@@ -1,4 +1,4 @@
 interface:
-  display_name: "职位搜索与详情"
-  short_description: "通过 boss-cli 解析城市、搜索筛选职位、查看详情并导出结果"
-  default_prompt: "使用 $boss-cli-jobs 搜索成都的 Python 职位，查看符合条件的详情并汇总。"
+  display_name: "职位搜索与公司资料"
+  short_description: "通过 boss-cli 搜索筛选职位、查看职位与公司资料并导出结果"
+  default_prompt: "使用 $boss-cli-jobs 搜索成都的 Python 职位，查看符合条件的职位与公司资料并汇总。"

@@ -1,6 +1,6 @@
 ---
 name: boss-cli-jobs
-description: 使用本地 boss-cli 查询 BOSS 直聘城市、按条件搜索职位、读取职位详情并导出结果。用户需要找工作、筛选或比较职位、查看职位链接时使用；不用于发送消息、投递简历或改变收藏。
+description: 使用本地 boss-cli 查询 BOSS 直聘城市、按条件搜索职位、读取职位及其关联公司资料并导出结果。用户需要找工作、筛选或比较职位、查看职位链接或招聘公司信息时使用；不用于发送消息、投递简历或改变收藏。
 ---
 
 # 职位搜索与详情
@@ -53,6 +53,20 @@ node bin/boss.js job "$job" --json
 - `STALE_JOB_CONTEXT` 表示没有取得新上下文；可在本次任务范围内重新执行原搜索或读取收藏一次，取得目标的新链接再继续。不要修改缓存时间、跨账号搬运上下文，或把首页内容当成详情。
 - 核对返回 `id` 与目标一致；引用 `title`、`company`、`salary`、`city`、`experience`、`education`、`description` 等实际字段。职位缺失字段或描述为空时如实说明，不补造信息。
 
+## 职位关联公司资料
+
+用户需要了解某个职位的发布公司时，使用同一个完整职位 URL 或加密职位 ID，沿用当前 profile：
+
+```powershell
+node bin/boss.js company "$job" --json
+```
+
+`company` 只读，不接受 `--execute`、分页或搜索筛选参数。它接收职位目标，不接收公司名称或公司主页链接；只有公司名称时，先在用户任务范围内取得并确认相关职位。
+
+核对 `job.id` 与目标一致，再引用实际返回的 `name`、`industry`、`scale`、`stage`、`description`、`welfare`。`url` 仅在公司标识与上下文充分时返回，不为匿名或代招公司猜测主页。`name` 为职位展示公司，`recruitingCompany.name` 为招聘者展示公司，两者可能不同，不推断实际劳动合同主体。
+
+`observedFrom` 和 `context` 说明资料来源；缺失字段标注未知，不把公司介绍当作已核验事实。`job.workAddress` 是站点允许展示的岗位工作地点，不是公司注册地址；该命令读取职位附带的公司资料，不包含主页完整工商信息。使用与职位详情相同的上下文和停止条件。
+
 ## 导出与呈现
 
 默认供用户阅读的表格会截短长字段，分析用 `--json`。用户要求保存时选用 `--format csv` 或 `--json` 配合 `--output`；只在确认目标文件可写后执行，现有同名文件会被覆盖。
@@ -60,6 +74,7 @@ node bin/boss.js job "$job" --json
 ```powershell
 node bin/boss.js search "Python" --city "成都" --format csv --output ".\exports\python-chengdu.csv"
 node bin/boss.js job "$job" --json --output ".\exports\job-detail.json"
+node bin/boss.js company "$job" --json --output ".\exports\company.json"
 ```
 
 命令只导出本次查询结果，不自动汇总其他页。成功结果在 stdout；指定 `--output` 后结果在文件，路径提示在 stderr。JSON 错误在 stderr，形如 `{"ok":false,"error":{"code","message","details"}}`，先检查退出码再解析结果。
@@ -74,4 +89,4 @@ node bin/boss.js job "$job" --json --output ".\exports\job-detail.json"
 - `RATE_LIMITED`、网络或超时错误：报告原因，停止本轮抓取，不循环重试。
 - `JOB_MISMATCH`、`SITE_CHANGED`、其他站点拒绝：保留错误含义，不能当成“没有职位”，也不能用其他职位代替。
 
-搜索和详情本身不授权收藏、开聊、发消息或投递；不调用这些写命令。
+搜索、职位详情和公司查询本身不授权收藏、开聊、发消息或投递；不调用这些写命令。

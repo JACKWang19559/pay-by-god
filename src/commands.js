@@ -91,6 +91,9 @@ export function resolveCommand({ options, positionals }) {
     case 'job':
       result = { name: command, method: 'job', args: { target: requireTarget(rest, '用法：boss job <职位链接或 ID>') } };
       break;
+    case 'company':
+      result = { name: command, method: 'company', args: { target: requireTarget(rest, '用法：boss company <职位链接或 ID>') } };
+      break;
     case 'cities':
       if (options.query && rest.length) throw new UsageError('城市关键词请通过位置参数或 --query 指定其中一种。');
       result = { name: command, method: 'cities', args: { query: options.query ?? rest.join(' ') } };
@@ -150,6 +153,7 @@ export const HELP = `boss-cli — BOSS 直聘求职端命令行工具
   cities [关键词]                  查询城市名称和代码
   search <关键词>                  搜索职位
   job <职位链接或 ID>              查看职位详情
+  company <职位链接或 ID>          查看该职位关联的公司资料
   favorites [list]                查看收藏
   favorites add <职位>             预览收藏操作，--execute 后执行
   favorites remove <职位>          预览取消收藏，--execute 后执行
@@ -186,6 +190,7 @@ export const HELP = `boss-cli — BOSS 直聘求职端命令行工具
   node bin/boss.js login
   node bin/boss.js search "前端开发" --city 北京 --json
   node bin/boss.js job "https://www.zhipin.com/job_detail/…html"
+  node bin/boss.js company <职位 ID> --json
   node bin/boss.js favorites add <职位 ID>
 
 遇到登录、验证码或站点访问限制时，在浏览器中手动完成后重试。

@@ -14,10 +14,10 @@ const jobId = 'fixture-job-001';
 const friend = { uid: 123, friendSource: 0, encryptBossId: 'fixture-boss', encryptJobId: jobId, securityId: 'fixture-security', name: '测试招聘者', brandName: '本地测试公司' };
 const cities = { code: 0, zpData: { cityList: [{ code: 101270000, name: '四川', subLevelModelList: [{ code: 101270100, name: '成都', pinyin: 'chengdu' }] }] } };
 function detail(state) {
-  return { jobInfo: { encryptId: jobId, jobName: 'Python 测试职位', salaryDesc: '10-20K', postDescription: '这是隔离测试数据', cityName: '成都' }, bossInfo: { name: friend.name }, brandComInfo: { brandName: friend.brandName }, relationInfo: { interestJob: state.favorite, beFriend: state.started }, oneKeyResumeInfo: { canSendResume: true }, securityId: friend.securityId, lid: 'fixture-lid', sessionId: 'fixture-session' };
+  return { jobInfo: { encryptId: jobId, jobName: 'Python 测试职位', salaryDesc: '10-20K', postDescription: '这是隔离测试数据', cityName: '成都', anonymous: 0, address: '本地测试工作地点' }, bossInfo: { name: friend.name, brandName: '测试招聘服务公司' }, brandComInfo: { encryptBrandId: 'fixture-brand-001', brandName: friend.brandName, industryName: '软件', scaleName: '100-499人', stageName: 'B轮', introduce: '隔离fixture公司介绍', labels: ['测试福利'], visibleBrandInfo: true }, relationInfo: { interestJob: state.favorite, beFriend: state.started }, oneKeyResumeInfo: { canSendResume: true }, securityId: friend.securityId, lid: 'fixture-lid', sessionId: 'fixture-session' };
 }
 function html(state, chat = false) {
-  const jobBody = state.domOnly ? `<div class="nav-figure">测试账户</div><div class="job-detail-container"><div class="job-name">DOM 测试职位</div><span class="job-salary">15-25K</span><p class="desc">第一行<br>第二行</p><button class="btn-deliver" data-url="/wapi/zpgeek/resume/onekeydeliver.json?jobId=${jobId}&securityId=fixture-security&lid=fixture-lid">发送简历</button></div>` : '<div class="nav-figure">测试账户</div><div class="job-detail-box"><h1>Python 测试职位</h1><button class="btn-deliver">发送简历</button></div>';
+  const jobBody = state.domOnly ? `<div class="nav-figure">测试账户</div><div class="job-detail-container"><div class="job-name">DOM 测试职位</div><span class="job-salary">15-25K</span><p class="desc">第一行<br>第二行</p><button class="btn-deliver" data-url="/wapi/zpgeek/resume/onekeydeliver.json?jobId=${jobId}&securityId=fixture-security&lid=fixture-lid">发送简历</button></div><section class="company-info"><h2 class="name">DOM 展示公司</h2></section><section class="company-info-box"><div class="job-sec-text">DOM 公司第一行<br>第二行</div></section>` : '<div class="nav-figure">测试账户</div><div class="job-detail-box"><h1>Python 测试职位</h1><button class="btn-deliver">发送简历</button></div>';
   const body = chat ? '<div id="app"><div id="editbox" contenteditable="true"></div></div>' : jobBody;
   return `<!doctype html><html><head><meta charset="UTF-8"><title>本地合同测试</title></head><body>${body}<script>
   const initial = ${JSON.stringify({ detail: detail(state), precheck: state.precheck, acknowledgment: state.acknowledgment, draft: state.draft })};
@@ -49,7 +49,7 @@ test('real Edge browser: CLI commands, previews, writes, errors and receipt hand
   const browser = await chromium.launch({ executablePath: executable, headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block' });
   const page = await context.newPage();
-  const state = { favorite: false, started: false, precheck: true, acknowledgment: true, draft: '', resumes: [{ resumeId: 'r-1', resumeName: '测试简历.pdf' }], deliveries: [], messages: [], calls: [], searchCode: 0 };
+  const state = { favorite: false, started: false, precheck: true, acknowledgment: true, draft: '', resumes: [{ resumeId: 'r-1', resumeName: '测试简历.pdf' }], deliveries: [], messages: [], calls: [], searchCode: 0, detailCode: 0 };
   const session = new BrowserSession({ profile: 'fixture', dataDir: temp, profileDir: path.join(temp, 'profile'), timeout: 1200 });
   session.browser = browser; session.context = context; session.page = page;
   // This injected browser only visits the local fixture; raw-CDP preparation is tested separately.
@@ -73,7 +73,7 @@ test('real Edge browser: CLI commands, previews, writes, errors and receipt hand
       case '/wapi/zpgeek/search/joblist.json':
         assert.equal(request.method(), 'POST'); assert.equal(form.city, '101270100'); assert.equal(form.degree, '203');
         data = state.searchCode ? { code: state.searchCode, message: '您的环境存在异常', zpData: { seed: 'fixture-challenge' } } : { code: 0, zpData: { jobList: [detail(state)], lid: 'fixture-lid', hasMore: false } }; break;
-      case '/wapi/zpgeek/job/detail.json': data = { code: 0, zpData: detail(state) }; break;
+      case '/wapi/zpgeek/job/detail.json': data = state.detailCode ? { code: state.detailCode, message: '您的环境存在异常', zpData: { seed: 'fixture-detail-challenge' } } : { code: 0, zpData: detail(state) }; break;
       case '/wapi/zprelation/interaction/geekGetJob': data = { code: 0, zpData: { cardList: state.favorite ? [detail(state)] : [], hasMore: false } }; break;
       case '/wapi/zprelation/geekTag/job/interest': state.favorite = form.flag === '1'; data = { code: 0 }; break;
       case '/wapi/zpgeek/friend/add.json': state.started = true; data = { code: 0 }; break;
@@ -103,6 +103,34 @@ test('real Edge browser: CLI commands, previews, writes, errors and receipt hand
       assert.equal((await run(['cities', '成都'])).items[0].code, '101270100');
       assert.equal((await run(['search', 'Python', '--city', '成都', '--education', '本科'])).items[0].id, jobId);
       assert.equal((await run(['job', jobId])).description, '这是隔离测试数据');
+    });
+    await t.test('company command reads the verified job company without posting or any extra endpoint', async () => {
+      const before = state.calls.length;
+      const result = await run(['company', jobId]);
+      assert.equal(result.id, 'fixture-brand-001');
+      assert.equal(result.name, friend.brandName);
+      assert.equal(result.url, `${SITE_ORIGIN}/gongsi/fixture-brand-001.html`);
+      assert.equal(result.description, '隔离fixture公司介绍');
+      assert.deepEqual(result.recruitingCompany, { name: '测试招聘服务公司' });
+      assert.equal(result.job.id, jobId);
+      assert.equal(result.job.workAddress, '本地测试工作地点');
+      assert.equal(result.context.source, 'cache');
+      assert.deepEqual(state.calls.slice(before).map(call => ({ path: call.path, method: call.method })), [{ path: '/wapi/zpgeek/job/detail.json', method: 'GET' }]);
+      assert.equal(state.favorite, false);
+      assert.equal(state.started, false);
+      assert.deepEqual(state.deliveries, []);
+      assert.deepEqual(state.messages, []);
+    });
+    await t.test('company command preserves code 37 and does not retry or export challenge data', async () => {
+      state.detailCode = 37;
+      const before = state.calls.length;
+      try {
+        const result = await run(['company', jobId], 4);
+        assert.equal(result.error.code, 'VERIFICATION_REQUIRED');
+        assert.equal(result.error.details.apiCode, 37);
+        assert.ok(!JSON.stringify(result).includes('fixture-detail-challenge'));
+        assert.deepEqual(state.calls.slice(before).map(call => call.path), ['/wapi/zpgeek/job/detail.json']);
+      } finally { state.detailCode = 0; }
     });
     await t.test('favorite previews do not write; add/list/remove execute', async () => {
       assert.equal((await run(['favorites', 'add', jobId])).executed, false); assert.equal(state.favorite, false);
@@ -165,6 +193,32 @@ test('real Edge browser: CLI commands, previews, writes, errors and receipt hand
       assert.equal(result.securityId, 'fixture-security');
       assert.equal(result.observedFrom, 'rendered-page');
       state.domOnly = false;
+    });
+    await t.test('uncached company CLI reads plain DOM company text without confusing it with the job description', async () => {
+      state.domOnly = true;
+      await page.goto(SITE_ORIGIN);
+      await client._clearJobCache();
+      const before = state.calls.length;
+      try {
+        const result = await run(['company', jobId]);
+        assert.equal(result.name, 'DOM 展示公司');
+        assert.equal(result.description, 'DOM 公司第一行\n第二行');
+        assert.equal(result.job.id, jobId);
+        assert.equal(result.job.title, 'DOM 测试职位');
+        assert.equal(result.context.source, 'rendered-page');
+        assert.equal(result.observedFrom, 'rendered-page');
+        assert.equal(Object.hasOwn(result, 'url'), false);
+        assert.ok(state.calls.slice(before).every(call => call.method === 'GET' && !call.path.startsWith('/wapi/')));
+      } finally { state.domOnly = false; }
+    });
+    await t.test('uncached company CLI labels embedded page data as rendered-page evidence', async () => {
+      await page.goto(SITE_ORIGIN);
+      await client._clearJobCache();
+      const result = await run(['company', jobId]);
+      assert.equal(result.name, friend.brandName);
+      assert.equal(result.description, '隔离fixture公司介绍');
+      assert.equal(result.context.source, 'rendered-page');
+      assert.equal(result.observedFrom, 'rendered-page');
     });
     await t.test('logout clears only this fixture browser session and foreign cookies survive', async () => {
       await context.addCookies([{ name: 'fixture', value: '1', domain: '.zhipin.com', path: '/' }, { name: 'foreign', value: '1', domain: 'example.com', path: '/' }]);
